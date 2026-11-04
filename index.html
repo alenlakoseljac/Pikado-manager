@@ -1,0 +1,95 @@
+<!doctype html><html lang="hr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Pikado Manager 7.2</title><style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#071526;color:#edf5ff}*{box-sizing:border-box}body{margin:0}header{background:linear-gradient(120deg,#09233c,#14508b);padding:22px 16px;border-bottom:2px solid #4fa5ef}main{max-width:1200px;margin:auto;padding:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}h1{font-size:25px;margin:0 0 6px}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:8px 0}p{line-height:1.45}.muted{color:#b8c9dd}.panel{background:#123251;border:1px solid #456a8c;border-radius:14px;padding:16px;margin-bottom:16px}label{display:block;font-size:14px;margin:12px 0 5px}input,select,textarea{background:#071c32;color:white;border:1px solid #7b9bb6;border-radius:9px;padding:12px;font-size:16px;max-width:100%}input[type=number]{width:76px}textarea{width:100%;min-height:145px;resize:vertical}input[type=text]{width:100%}button,.button{display:inline-flex;align-items:center;justify-content:center;min-height:45px;padding:10px 14px;background:#1682e0;color:#fff;border:0;border-radius:9px;font-weight:700;font-size:15px;cursor:pointer}button.secondary{background:#294e72}button:disabled{opacity:.4}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.settings label{margin:0}.settings input,.settings select{width:100%;margin-top:6px}.stats{display:flex;gap:12px;flex-wrap:wrap}.stats span{background:#23476c;padding:8px 12px;border-radius:8px}.match{background:#09213b;border:1px solid #527ba0;border-radius:12px;padding:13px;margin:10px 0}.match small{color:#b7d0e9}.versus{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:10px;align-items:center;margin:9px 0}.versus strong{overflow-wrap:anywhere}.versus input{width:72px;text-align:center;font-size:20px;font-weight:700}.result{color:#91efbf}.error{color:#ffb0aa}.success{color:#a1f5bd}.bracket{display:flex;gap:12px;overflow-x:auto;padding:6px 0 15px;scroll-snap-type:x proximity}.round{min-width:245px;width:245px;scroll-snap-align:start;background:#173d62;border-radius:10px;padding:10px}.round .match{padding:9px;font-size:13px}.round .match div{padding:4px 0;overflow-wrap:anywhere}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tabs button[aria-selected=true]{background:#fff;color:#09233c}.hide{display:none!important}.hint{border-left:3px solid #e9b75e;padding-left:12px;color:#f5dba8}#notice{min-height:22px}.match button{width:100%;margin-top:8px}.versus input{min-height:52px}.tabs{position:sticky;top:0;z-index:5;background:#071526;padding:8px 0}.tabs button{flex:1 1 140px}@media(max-width:500px){.tabs button{flex:1 1 42%;font-size:13px;padding:8px}.panel{padding:13px}.versus{grid-template-columns:minmax(0,1fr) 82px}.versus input{width:82px}}footer{padding:20px;text-align:center;color:#b4c5d6}@media(min-width:700px){main{padding:22px}.ready-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}}
+</style></head><body><header><h1>🎯 PIKADO MANAGER <small>v7.2</small></h1><div>Soft-tip · 501 Double Out · Double Elimination</div></header><main><section class="panel"><h2>Turnir</h2><div class="settings"><label>Naziv turnira<input id="title" type="text" value="1. BOSCO Open"></label><label>Broj aparata<select id="machines"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label><label>Format<select id="legs"><option value="1">BO1 – 1 leg</option><option value="2" selected>BO3 – 2 dobivena lega</option><option value="3">BO5 – 3 dobivena lega</option><option value="4">BO7 – 4 dobivena lega</option><option value="5">BO9 – 5 dobivenih legova</option></select></label></div><label>Igrači (svaki u novi red, 8–64)</label><textarea id="players" placeholder="Igrač 01&#10;Igrač 02&#10;..."></textarea><div class="toolbar"><button id="demo">Popuni 16 igrača</button><button id="start">Pokreni novi turnir</button></div><p class="muted">Novi turnir zamjenjuje postojeći na ovom uređaju. Prije toga spremi sigurnosnu kopiju.</p></section><section id="running" class="hide"><section class="panel"><h2 id="runningtitle"></h2><div class="stats" id="stats"></div><div class="toolbar"><button class="secondary" id="undo">↶ Poništi zadnji rezultat</button><button class="secondary" id="backup">Spremi kopiju JSON</button><button class="secondary" id="import">Uvezi kopiju</button><input id="file" type="file" accept=".json,application/json" hidden></div><p id="notice" aria-live="polite"></p></section><nav class="tabs"><button id="tab-active" aria-selected="true">🎯 Unos rezultata</button><button id="tab-w" aria-selected="false">🏆 Pobjednička W</button><button id="tab-l" aria-selected="false">🎯 Gubitnička L</button><button id="tab-final" aria-selected="false">🏅 Finale</button></nav><section class="panel" id="view-active"></section><section class="panel hide" id="view-w"></section><section class="panel hide" id="view-l"></section><section class="panel hide" id="view-final"></section></section></main><footer>Lokalna testna verzija · podaci se čuvaju u pregledniku · nije višekorisnička platforma</footer><script>
+'use strict';
+const KEY='pikado-manager-v72';let paddedGame=null,activeTab='active';const $=id=>document.getElementById(id);const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function paddedGraph(names){
+ const n=names.length,size=2**Math.ceil(Math.log2(n)),k=Math.log2(size),seed=[];
+ const queue=names.slice();
+ for(let i=0;i<size/2;i++){
+  if(i<n-size/2)seed.push({seed:queue.shift()},{seed:queue.shift()});
+  else seed.push({seed:queue.shift()||null},{seed:null});
+ }
+ const w=[],l=[],all=[];let prev=seed;
+ for(let r=1;r<=k;r++){
+  const round=[];
+  for(let i=0;i<prev.length;i+=2){const m={id:`W${r}-${i/2+1}`,a:prev[i],b:prev[i+1],type:'W'};round.push(m);all.push(m);}
+  w.push(round);prev=round.map(m=>({from:m.id,out:'W'}));
+ }
+ for(let r=1;r<=2*k-2;r++){
+  const count=size/2**(Math.floor((r-1)/2)+2),round=[];
+  for(let i=0;i<count;i++){
+   let a,b;
+   if(r===1){a={from:`W1-${2*i+1}`,out:'L'};b={from:`W1-${2*i+2}`,out:'L'};}
+   else if(r%2===0){a={from:`L${r-1}-${i+1}`,out:'W'};const wr=r/2+1,wcount=size/2**wr,wi=(i+Math.floor(wcount/2))%wcount+1;b={from:`W${wr}-${wi}`,out:'L'};}
+   else {a={from:`L${r-1}-${2*i+1}`,out:'W'};b={from:`L${r-1}-${2*i+2}`,out:'W'};}
+   const m={id:`L${r}-${i+1}`,a,b,type:'L'};round.push(m);all.push(m);
+  }
+  l.push(round);
+ }
+ const gf={id:'GF1',a:{from:w.at(-1)[0].id,out:'W'},b:{from:l.at(-1)[0].id,out:'W'},type:'GF'};all.push(gf);
+ return {w,l,all};
+}
+function paddedState(){
+ const graph=paddedGraph(paddedGame.names),results={...paddedGame.results},pending=graph.all.slice();
+ const losses=Object.fromEntries(paddedGame.names.map(x=>[x,0]));
+ const resolve=s=>Object.hasOwn(s,'seed')?{known:true,value:s.seed}:Object.hasOwn(results,s.from)?{known:true,value:results[s.from][s.out]}:{known:false,value:null};
+ let ready=[],safety=0,errors=[];
+ while(pending.length){
+  if(++safety>graph.all.length+2){errors.push('Ciklus u ždrijebu');break;}
+  let progress=false;
+  for(const m of pending.slice()){
+   const a=resolve(m.a),b=resolve(m.b);
+   if(!a.known||!b.known)continue;
+   if(!a.value||!b.value){
+    if(results[m.id])errors.push('Rezultat postoji za BYE: '+m.id);
+    results[m.id]={W:a.value||b.value||null,L:null,auto:true};
+    pending.splice(pending.indexOf(m),1);progress=true;continue;
+   }
+   if(a.value===b.value)errors.push('Isti igrač u '+m.id);
+   const r=paddedGame.results[m.id];
+   if(r&&(!r.W||!r.L||!paddedGame.names.includes(r.W)||!paddedGame.names.includes(r.L))){errors.push('Oštećen rezultat '+m.id);pending.splice(pending.indexOf(m),1);progress=true;continue;}
+   if(!r){
+    if(m.type==='W'&&(losses[a.value]!==0||losses[b.value]!==0))errors.push('Neispravna W putanja spremnog meča '+m.id);
+    if(m.type==='L'&&(losses[a.value]!==1||losses[b.value]!==1))errors.push('Neispravna L putanja spremnog meča '+m.id);
+    if(m.type==='GF'&&(losses[a.value]!==0||losses[b.value]!==1))errors.push('Neispravna putanja velikog finala '+m.id);
+    if(!ready.some(x=>x.m.id===m.id))ready.push({m,a:a.value,b:b.value});continue;
+   }
+   if(!((r.W===a.value&&r.L===b.value)||(r.W===b.value&&r.L===a.value)))errors.push('Pogrešan pobjednik u '+m.id);
+   if(!Number.isInteger(r.sa)||!Number.isInteger(r.sb)||Math.max(r.sa,r.sb)!==paddedGame.legs||Math.min(r.sa,r.sb)<0||r.sa===r.sb||((r.sa>r.sb?a.value:b.value)!==r.W))errors.push('Neispravan zapis legova '+m.id);
+   if(m.type==='W'&&(losses[a.value]!==0||losses[b.value]!==0))errors.push('Pogrešna W putanja '+m.id);
+   if(m.type==='L'&&(losses[a.value]!==1||losses[b.value]!==1))errors.push('Pogrešna L putanja '+m.id);
+   losses[r.L]++;
+   results[m.id]=r;pending.splice(pending.indexOf(m),1);progress=true;
+  }
+  if(!progress)break;
+ }
+ const active=new Map();
+ for(const {m,a,b} of ready)for(const p of [a,b]){if(active.has(p))errors.push('Dvije spremne utakmice za '+p+': '+active.get(p)+' / '+m.id);active.set(p,m.id);}
+ const gf=results.GF1,reset=!!gf&&!!gf.L&&losses[gf.L]===1;
+ if(paddedGame.resetResult){
+  const rr=paddedGame.resetResult;
+  if(!reset||!gf||!((rr.W===gf.W&&rr.L===gf.L)||(rr.W===gf.L&&rr.L===gf.W))||!Number.isInteger(rr.sa)||!Number.isInteger(rr.sb)||Math.max(rr.sa,rr.sb)!==paddedGame.legs||Math.min(rr.sa,rr.sb)<0||rr.sa===rr.sb||((rr.sa>rr.sb?gf.W:gf.L)!==rr.W))errors.push('Neispravan reset finala');
+ }
+ const completed=Object.values(paddedGame.results).length; // Samo odigrane utakmice, bez automatskih BYE prolaza.
+ return {graph,results,ready,losses,errors,reset,completed};
+}
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(paddedGame));}catch(e){notify('Spremanje nije uspjelo: '+e.message,true);}}
+function notify(msg,error=false){$('notice').textContent=msg;$('notice').className=error?'error':'success';}
+function start(){const names=$('players').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(names.length<8||names.length>64)return alert('Unesi 8 do 64 igrača.');if(new Set(names.map(n=>n.toLocaleLowerCase('hr'))).size!==names.length)return alert('Imena se ponavljaju.');if(paddedGame&&!confirm('Zamijeniti postojeći turnir? Prvo spremi kopiju ako ti treba.'))return;paddedGame={names,legs:+$('legs').value,machines:+$('machines').value,title:$('title').value.trim()||'Turnir',results:{},resetResult:null,history:[]};save();activeTab='active';render();$('running').scrollIntoView({behavior:'smooth',block:'start'});}
+function scoreCard(m,a,b){return `<article class="match"><small>${esc(m.id)} · ${m.type==='W'?'Pobjednička':m.type==='L'?'Gubitnička':'Finale'}</small><div class="versus"><strong>${esc(a)}</strong><input inputmode="numeric" type="number" step="1" placeholder="0" min="0" max="${paddedGame.legs}" id="sa-${m.id}" aria-label="Legovi ${esc(a)}"></div><div class="versus"><strong>${esc(b)}</strong><input inputmode="numeric" type="number" step="1" placeholder="0" min="0" max="${paddedGame.legs}" id="sb-${m.id}" aria-label="Legovi ${esc(b)}"></div><button data-save="${m.id}">✓ Spremi rezultat · ${esc(m.id)}</button></article>`;}
+function submit(id){const s=paddedState();if(s.errors.length)return notify('Ždrijeb ima grešku: '+s.errors.join(' | '),true);const m=s.ready.find(x=>x.m.id===id);if(!m)return;const x=$('sa-'+id),y=$('sb-'+id);if(!x||!y)return;if(x.value===''||y.value==='')return notify('Unesi legove za oba igrača.',true);const a=Number(x.value),b=Number(y.value),legs=paddedGame.legs;if(!Number.isInteger(a)||!Number.isInteger(b)||Math.max(a,b)!==legs||Math.min(a,b)<0||a===b)return notify('Rezultat mora biti npr. '+legs+':0 ili '+legs+':'+(legs-1)+'.',true);const previous=JSON.stringify(paddedGame);paddedGame.results[id]={W:a>b?m.a:m.b,L:a>b?m.b:m.a,sa:a,sb:b};const check=paddedState();if(check.errors.length){paddedGame=JSON.parse(previous);return notify('Rezultat nije spremljen: '+check.errors.join(' | '),true);}paddedGame.history.push(previous);save();render();notify('Spremljeno: '+m.a+' '+a+':'+b+' '+m.b);}
+function submitReset(){const s=paddedState();if(!s.reset||paddedGame.resetResult)return;const a=$('sa-GF2'),b=$('sb-GF2');if(!a||!b||a.value===''||b.value==='')return notify('Unesi oba rezultata finala.',true);const x=Number(a.value),y=Number(b.value),n=paddedGame.legs;if(!Number.isInteger(x)||!Number.isInteger(y)||Math.max(x,y)!==n||Math.min(x,y)<0||x===y)return notify('Neispravan rezultat.',true);const gf=s.results.GF1,previous=JSON.stringify(paddedGame);paddedGame.resetResult={W:x>y?gf.W:gf.L,L:x>y?gf.L:gf.W,sa:x,sb:y};const check=paddedState();if(check.errors.length){paddedGame=JSON.parse(previous);return notify(check.errors.join(' | '),true);}paddedGame.history.push(previous);save();render();notify('Reset finala spremljen.');}
+function undo(){if(!paddedGame?.history?.length)return;if(!confirm('Poništiti zadnji uneseni rezultat?'))return;const previous=paddedGame.history.at(-1);paddedGame=JSON.parse(previous);save();render();notify('Zadnji rezultat je poništen.');}
+function slot(s,x){if(Object.hasOwn(x,'seed'))return x.seed||'BYE';const r=s.results[x.from];return r?(r[x.out]||'BYE'):(x.out==='W'?'Pobjednik ':'Poraženi ')+x.from;}
+function bracketRound(s,round,title){return `<div class="round"><h3>${esc(title)}</h3>${round.map(m=>{const r=s.results[m.id];return `<div class="match"><small>${esc(m.id)} ${r?.auto?'· slobodan prolaz':r?'· '+esc(r.sa+':'+r.sb):''}</small><div>${esc(slot(s,m.a))}</div><div>${esc(slot(s,m.b))}</div>${r&&!r.auto?'<div class="result">✓ '+esc(r.W)+'</div>':''}</div>`;}).join('')}</div>`;}
+function render(){if(!paddedGame){$('running').classList.add('hide');return;}$('running').classList.remove('hide');$('title').value=paddedGame.title||'Turnir';$('machines').value=paddedGame.machines||4;$('legs').value=paddedGame.legs;$('players').value=paddedGame.names.join('\n');$('runningtitle').textContent=paddedGame.title||'Turnir';const s=paddedState(),gf=s.results.GF1,done=!!gf&&(!s.reset||!!paddedGame.resetResult),champ=done?(paddedGame.resetResult?.W||gf.W):null,played=s.completed+(paddedGame.resetResult?1:0);$('stats').innerHTML=`<span>${paddedGame.names.length} igrača</span><span>${played} mečeva</span><span>${s.ready.length} spremno</span><span>${paddedGame.machines||4} aparata</span>`;$('undo').disabled=!paddedGame.history?.length;
+let content='';if(s.errors.length)content=`<p class="error">⛔ ${esc(s.errors.join(' | '))}</p>`;else if(done)content=`<h2 class="success">🏆 Pobjednik: ${esc(champ)}</h2><p>Turnir je završen. Odigrano ${played} mečeva.</p>`;else if(s.reset&&!paddedGame.resetResult){const a=gf.W,b=gf.L;content='<h2>🏅 Odlučujuće finale (reset)</h2><p>Pobjednik gubitničke strane dobio je prvo finale. Potrebna je još jedna utakmica.</p>'+scoreCard({id:'GF2',type:'GF'},a,b).replace('data-save="GF2"','data-reset="GF2"');}else content=`<h2>Utakmice spremne za igru (${s.ready.length})</h2><p class="muted">Upiši broj osvojenih legova za oba igrača pa pritisni Spremi rezultat.</p><div class="ready-grid">${s.ready.map(({m,a,b})=>scoreCard(m,a,b)).join('')}</div>${!s.ready.length?'<p>Čeka se završetak prethodnih mečeva.</p>':''}`;
+$('view-active').innerHTML=content;$('view-w').innerHTML='<h2>🏆 Pobjednička strana</h2><div class="bracket">'+s.graph.w.map((r,i)=>bracketRound(s,r,'W – kolo '+(i+1))).join('')+'</div>';$('view-l').innerHTML='<h2>🎯 Gubitnička strana</h2><div class="bracket">'+s.graph.l.map((r,i)=>bracketRound(s,r,'L – kolo '+(i+1))).join('')+'</div>';
+let final='<h2>🏅 Veliko finale</h2>'+bracketRound(s,[s.graph.all.at(-1)],'GF1');if(s.reset){const a=gf.W,b=gf.L;final+='<h3>Reset finala</h3>'+(paddedGame.resetResult?`<p class="success">${esc(a)} ${paddedGame.resetResult.sa}:${paddedGame.resetResult.sb} ${esc(b)} · pobjednik ${esc(paddedGame.resetResult.W)}</p>`:scoreCard({id:'GF2',type:'GF'},a,b).replace('data-save="GF2"','data-reset="GF2"'));}else if(!gf)final+='<p class="muted">Finale se otvara nakon W i L ždrijeba.</p>';$('view-final').innerHTML=final;
+for(const tab of ['active','w','l','final']){$('view-'+tab).classList.toggle('hide',activeTab!==tab);$('tab-'+tab).setAttribute('aria-selected',String(activeTab===tab));}document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>submit(b.dataset.save));document.querySelectorAll('[data-reset]').forEach(b=>b.onclick=submitReset);}
+function backup(){if(!paddedGame)return;const blob=new Blob([JSON.stringify({format:'pikado-manager-v72',game:paddedGame},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pikado-manager-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);}
+async function importFile(file){if(!file)return;try{if(file.size>1000000)throw Error('Datoteka je prevelika.');const obj=JSON.parse(await file.text()),g=obj.game;if(!g||!Array.isArray(g.names)||g.names.length<8||g.names.length>64||!g.names.every(n=>typeof n==='string'&&n.trim())||new Set(g.names.map(x=>x.toLowerCase())).size!==g.names.length||!Number.isInteger(g.legs)||g.legs<1||g.legs>5||!g.results||typeof g.results!=='object'||Array.isArray(g.results))throw Error('Neispravna kopija.');const allowed=new Set(paddedGraph(g.names).all.map(x=>x.id));if(Object.keys(g.results).some(id=>!allowed.has(id)))throw Error('Nepoznati mečevi.');if(!Number.isInteger(g.machines)||g.machines<1||g.machines>8)g.machines=4;const previous=paddedGame;paddedGame=g;let s;try{s=paddedState();}finally{paddedGame=previous;}if(s.errors.length)throw Error(s.errors.join(' | '));if(!confirm('Uvesti kopiju i zamijeniti trenutni turnir?'))return;paddedGame=g;paddedGame.history=[];save();render();notify('Kopija uvezena.');}catch(e){alert('Uvoz nije uspio: '+e.message);}}
+$('demo').onclick=()=>{$('players').value=Array.from({length:16},(_,i)=>'Igrač '+String(i+1).padStart(2,'0')).join('\n');};$('start').onclick=start;$('undo').onclick=undo;$('backup').onclick=backup;$('import').onclick=()=>$('file').click();$('file').onchange=e=>importFile(e.target.files[0]);for(const tab of ['active','w','l','final'])$('tab-'+tab).onclick=()=>{activeTab=tab;render();};try{paddedGame=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem('pikado-manager-v71')||localStorage.getItem('pikado-manager-v70')||'null');if(paddedGame){save();render();}}catch(e){paddedGame=null;}
+</script></body></html>
